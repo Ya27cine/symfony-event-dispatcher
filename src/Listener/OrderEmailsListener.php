@@ -37,6 +37,26 @@ class OrderEmailsListener{
         $this->logger->log("Commande en cours pour {$order->getQuantity()} {$order->getProduct()}");
     }
 
+    public function sendToCustomer(OrderEvent $event){
+        
+        $order = $event->getOrder();
+
+        // Après enregistrement, on veut envoyer un email au client :
+        // voir src/Mailer/Email.php et src/Mailer/Mailer.php
+        $email = new Email();
+        $email->setSubject("Commande confirmée")
+            ->setBody("Merci pour votre commande de {$order->getQuantity()} {$order->getProduct()} !")
+            ->setFrom("web@maboutique.com")
+            ->setTo($order->getEmail());
+
+        $this->mailer->send($email);
+
+        // Après email au client, on veut logger ce qui se passe :
+        // voir src/Logger.php
+        $this->logger->log("Email de confirmation envoyé à {$order->getEmail()} !");
+
+    }
+
 }
 
 
