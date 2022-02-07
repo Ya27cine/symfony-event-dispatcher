@@ -6,9 +6,12 @@ use App\Database;
 use App\Logger;
 use App\Mailer\Email;
 use App\Mailer\Mailer;
+use App\Model\EventMessage;
 use App\Model\Order;
 use App\Texter\Sms;
 use App\Texter\SmsTexter;
+use Symfony\Component\EventDispatcher\EventDispatcher;
+use Symfony\Component\EventDispatcher\GenericEvent;
 
 class OrderController
 {
@@ -18,12 +21,15 @@ class OrderController
     protected $texter;
     protected $logger;
 
-    public function __construct(Database $database, Mailer $mailer, SmsTexter $texter, Logger $logger)
+    protected $dispatcher;
+
+    public function __construct(Database $database, Mailer $mailer, SmsTexter $texter, Logger $logger, EventDispatcher $dispatcher)
     {
         $this->database = $database;
         $this->mailer = $mailer;
         $this->texter = $texter;
         $this->logger = $logger;
+        $this->dispatcher = $dispatcher;
     }
 
     public function displayOrderForm()
@@ -46,25 +52,18 @@ class OrderController
         // Extraction des données du POST et création d'un objet Order (voir src/Model/Order.php)
         $order = new Order;
         $order->setProduct($_POST['product'])
-            ->setQuantity($_POST['quantity'])
-            ->setEmail($_POST['email'])
-            ->setPhoneNumber($_POST['phone']);
+              ->setQuantity($_POST['quantity'])
+              ->setEmail($_POST['email'])
+              ->setPhoneNumber($_POST['phone']);
 
-        // Avant d'enregistrer, on veut envoyer un email à l'administrateur :
-        // voir src/Mailer/Email.php et src/Mailer/Mailer.php
-        $email = new Email();
-        $email->setSubject("Commande en cours")
-            ->setBody("Merci de vérifier le stock pour le produit {$order->getProduct()} et la quantité {$order->getQuantity()} !")
-            ->setTo("stock@maboutique.com")
-            ->setFrom("web@maboutique.com");
+    
+        $this->dispatcher->dispatch( new GenericEvent($order), EventMessage::ORDER_BEFORE_INSERT);
 
-        // Avant d'enregistrer, on veut logger ce qui se passe :
-        // voir src/Logger.php
-        $this->logger->log("Commande en cours pour {$order->getQuantity()} {$order->getProduct()}");
 
         // Enregistrement en base de données :
         // voir src/Database.php
         $this->database->insertOrder($order);
+
 
         // Après enregistrement, on veut envoyer un email au client :
         // voir src/Mailer/Email.php et src/Mailer/Mailer.php
