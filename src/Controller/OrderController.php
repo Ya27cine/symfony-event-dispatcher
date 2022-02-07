@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Database;
+use App\Event\OrderEvent;
 use App\Logger;
 use App\Mailer\Email;
 use App\Mailer\Mailer;
@@ -57,7 +58,7 @@ class OrderController
               ->setPhoneNumber($_POST['phone']);
 
     
-        $this->dispatcher->dispatch( new GenericEvent($order), EventMessage::ORDER_BEFORE_INSERT);
+        $this->dispatcher->dispatch( new OrderEvent($order), EventMessage::ORDER_BEFORE_INSERT);
 
 
         // Enregistrement en base de données :
